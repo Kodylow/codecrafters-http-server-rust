@@ -3,6 +3,12 @@ use std::net::TcpListener;
 
 use tracing::info;
 
+// To try this locally on macOS:
+// run ./your_server.sh in one terminal session
+// nc -vz 127.0.0.1 4221 in another.
+// (-v gives more verbose output,
+// -z just scan for listening daemons, without sending any data to them.)
+
 fn main() {
     let subscriber = tracing_subscriber::fmt()
         .with_max_level(tracing::Level::INFO)
