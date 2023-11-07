@@ -1,5 +1,5 @@
 // Uncomment this block to pass the first stage
-use std::io::Write;
+use std::io::{Read, Write};
 use std::net::TcpListener;
 
 use tracing::{error, info};
@@ -24,7 +24,7 @@ fn main() {
             Ok(mut stream) => {
                 // read data from connection
                 let mut buf = [0; 512];
-                stream.peek(&mut buf).unwrap();
+                stream.read(&mut buf).unwrap();
                 // log the data
                 info!("Received data: {}", String::from_utf8_lossy(&buf[..]));
                 // send response HTTP/1.1 2002 OK\r\n\r\n
