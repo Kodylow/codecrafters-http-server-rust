@@ -20,9 +20,25 @@ impl Request {
         let mut lines = request.lines();
         let start_line =
             Self::parse_start_line(lines.next().ok_or_else(|| anyhow!("Request is empty"))?)?;
-        let host = Self::parse_header(&mut lines, "Host:").unwrap_or_default();
-        let user_agent = Self::parse_header(&mut lines, "User-Agent:").unwrap_or_default();
-        let body = lines.collect::<Vec<&str>>().join("\n");
+        let mut host = String::new();
+        let mut user_agent = String::new();
+        let mut body = String::new();
+        let mut body_started = false;
+
+        for line in lines {
+            if !body_started {
+                if line.starts_with("Host:") {
+                    host = Self::parse_header(line, "Host:").unwrap_or_default();
+                } else if line.starts_with("User-Agent:") {
+                    user_agent = Self::parse_header(line, "User-Agent:").unwrap_or_default();
+                } else if line.is_empty() {
+                    body_started = true;
+                }
+            } else {
+                body.push_str(line);
+                body.push('\n');
+            }
+        }
 
         Ok(Request {
             method: start_line.method,
@@ -47,11 +63,11 @@ impl Request {
         })
     }
 
-    fn parse_header<'a, I: Iterator<Item = &'a str>>(
-        lines: &mut I,
-        header: &str,
-    ) -> Option<String> {
-        let line = lines.find(|&line| line.starts_with(header))?;
-        line.split_whitespace().nth(1).map(|s| s.to_string())
+    fn parse_header(line: &str, header: &str) -> Option<String> {
+        if line.starts_with(header) {
+            line.split_whitespace().nth(1).map(|s| s.to_string())
+        } else {
+            None
+        }
     }
 }
