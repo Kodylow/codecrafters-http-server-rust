@@ -46,7 +46,7 @@ impl Request {
             }
         }
 
-        body = body.replace('\x00', "");
+        body = body.replace('\x00', "").trim_end_matches('\n').to_string();
 
         Ok(Request {
             method: start_line.method,
