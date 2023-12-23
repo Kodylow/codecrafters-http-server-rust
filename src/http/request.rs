@@ -20,8 +20,8 @@ impl Request {
 
         let start_line =
             Self::parse_start_line(lines.next().ok_or_else(|| anyhow!("Request is empty"))?)?;
-        let host = Self::parse_header(&mut lines, "Host:")?;
-        let user_agent = Self::parse_header(&mut lines, "User-Agent:")?;
+        let host = Self::parse_header(&mut lines, "Host:").unwrap_or_default();
+        let user_agent = Self::parse_header(&mut lines, "User-Agent:").unwrap_or_default();
 
         Ok(Request {
             method: start_line.method,
@@ -48,13 +48,8 @@ impl Request {
     fn parse_header<'a, I: Iterator<Item = &'a str>>(
         lines: &mut I,
         header: &str,
-    ) -> Result<String> {
-        let line = lines
-            .find(|&line| line.starts_with(header))
-            .ok_or_else(|| anyhow!("Header not found"))?;
-        line.split_whitespace()
-            .nth(1)
-            .context("Header value not found")
-            .map(|s| s.to_string())
+    ) -> Option<String> {
+        let line = lines.find(|&line| line.starts_with(header))?;
+        line.split_whitespace().nth(1).map(|s| s.to_string())
     }
 }
