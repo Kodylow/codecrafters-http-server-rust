@@ -1,8 +1,7 @@
 // Uncomment this block to pass the first stage
 use anyhow::{bail, Result};
-use std::env;
 use std::net::TcpListener;
-use utils::{handle_connection, tracing_setup};
+use utils::{handle_connection, parse_directory_from_cli, tracing_setup};
 
 mod http;
 mod router;
@@ -35,17 +34,4 @@ fn main() -> Result<()> {
     }
 
     Ok(())
-}
-
-fn parse_directory_from_cli() -> String {
-    let args: Vec<String> = env::args().collect();
-    args.iter()
-        .find(|arg| arg.starts_with("--directory="))
-        .map(|arg| {
-            arg.splitn(2, '=')
-                .nth(1)
-                .unwrap_or("default_directory")
-                .to_string()
-        })
-        .unwrap_or_else(|| String::from("default_directory"))
 }

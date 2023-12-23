@@ -1,8 +1,10 @@
-use std::io::{Read, Write};
+use std::{
+    env,
+    io::{Read, Write},
+};
 
 use crate::{http::Request, router};
 use anyhow::Result;
-use tracing::info;
 
 pub fn tracing_setup() -> Result<(), anyhow::Error> {
     let tracer = tracing_subscriber::fmt()
@@ -16,7 +18,6 @@ pub fn parse_stream(stream: &mut std::net::TcpStream) -> Result<String> {
     let mut buffer = [0; 1024];
     stream.read(&mut buffer).unwrap();
     let request = String::from_utf8(buffer.to_vec())?;
-    info!("request stream: {}", request);
     Ok(request)
 }
 
@@ -31,5 +32,21 @@ pub fn handle_connection(mut stream: std::net::TcpStream, directory: String) {
             eprintln!("Failed to parse request: {}", e);
             // Handle the error appropriately here
         }
+    }
+}
+
+pub fn parse_directory_from_cli() -> String {
+    let args: Vec<String> = env::args().collect();
+    let directory_arg_position = args.iter().position(|arg| arg == "--directory");
+
+    match directory_arg_position {
+        Some(index) => {
+            if index < args.len() - 1 {
+                args[index + 1].clone()
+            } else {
+                String::from("default_directory")
+            }
+        }
+        None => String::from("default_directory"),
     }
 }
