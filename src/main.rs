@@ -31,6 +31,7 @@ fn main() -> Result<()> {
                         let random_string = &path[6..];
                         Response::new("200 OK", "text/plain", random_string.to_string())
                     }
+                    path if path == "/" => Response::new("200 OK", "text/plain", "".to_string()),
                     _ => Response::new("404 NOT FOUND", "text/plain", "".to_string()),
                 };
                 stream.write(response.format().as_bytes()).unwrap();
