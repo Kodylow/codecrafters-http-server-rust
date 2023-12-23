@@ -20,6 +20,7 @@ use http::{Request, Response};
 const OK: &str = "200 OK";
 const NOT_FOUND: &str = "404 NOT FOUND";
 const TEXT_PLAIN: &str = "text/plain";
+const OCTET_STREAM: &str = "application/octet-stream";
 
 fn router(request: Request, directory: &str) -> Response {
     match request.path.as_str() {
@@ -31,7 +32,7 @@ fn router(request: Request, directory: &str) -> Response {
             let filename = &path[7..];
             let filepath = format!("{}/{}", directory, filename);
             match fs::read_to_string(&filepath) {
-                Ok(contents) => Response::new(OK, "application/octet-stream", contents),
+                Ok(contents) => Response::new(OK, OCTET_STREAM, contents),
                 Err(_) => Response::new(NOT_FOUND, TEXT_PLAIN, "".to_string()),
             }
         }
