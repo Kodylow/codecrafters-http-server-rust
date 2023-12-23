@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 
 pub struct Request {
     pub method: String,
@@ -27,18 +27,26 @@ impl Request {
 
         for line in lines {
             if !body_started {
-                if line.starts_with("Host:") {
-                    host = Self::parse_header(line, "Host:").unwrap_or_default();
-                } else if line.starts_with("User-Agent:") {
-                    user_agent = Self::parse_header(line, "User-Agent:").unwrap_or_default();
-                } else if line.is_empty() {
-                    body_started = true;
+                match line {
+                    line if line.starts_with("Host:") => {
+                        host = Self::parse_header(line, "Host:").map_or_else(String::new, |s| s);
+                    }
+                    line if line.starts_with("User-Agent:") => {
+                        user_agent =
+                            Self::parse_header(line, "User-Agent:").map_or_else(String::new, |s| s);
+                    }
+                    line if line.is_empty() => {
+                        body_started = true;
+                    }
+                    _ => {}
                 }
             } else {
                 body.push_str(line);
                 body.push('\n');
             }
         }
+
+        body = body.trim_end_matches('\x00').to_string();
 
         Ok(Request {
             method: start_line.method,
@@ -52,9 +60,18 @@ impl Request {
 
     fn parse_start_line(line: &str) -> Result<StartLine> {
         let mut parts = line.split_whitespace();
-        let method = parts.next().context("Method not found")?.to_string();
-        let path = parts.next().context("Path not found")?.to_string();
-        let version = parts.next().context("Version not found")?.to_string();
+        let method = parts
+            .next()
+            .ok_or_else(|| anyhow!("Method not found"))?
+            .to_string();
+        let path = parts
+            .next()
+            .ok_or_else(|| anyhow!("Path not found"))?
+            .to_string();
+        let version = parts
+            .next()
+            .ok_or_else(|| anyhow!("Version not found"))?
+            .to_string();
 
         Ok(StartLine {
             method,
@@ -64,10 +81,7 @@ impl Request {
     }
 
     fn parse_header(line: &str, header: &str) -> Option<String> {
-        if line.starts_with(header) {
-            line.split_whitespace().nth(1).map(|s| s.to_string())
-        } else {
-            None
-        }
+        line.starts_with(header)
+            .then(|| line.split_whitespace().nth(1).unwrap().to_owned())
     }
 }
