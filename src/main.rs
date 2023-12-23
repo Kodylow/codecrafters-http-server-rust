@@ -18,6 +18,13 @@ const OK: &str = "200 OK";
 const NOT_FOUND: &str = "404 NOT FOUND";
 const TEXT_PLAIN: &str = "text/plain";
 
+fn handle_connection(mut stream: std::net::TcpStream) {
+    let request = parse_stream(&mut stream).unwrap();
+    let parsed_request = Request::parse(&request).unwrap();
+    let response = create_response(parsed_request);
+    stream.write(response.format().as_bytes()).unwrap();
+}
+
 fn main() -> Result<()> {
     tracing_setup()?;
 
@@ -25,13 +32,8 @@ fn main() -> Result<()> {
 
     for stream in listener.incoming() {
         match stream {
-            Ok(mut stream) => {
-                let request = parse_stream(&mut stream)?;
-
-                let parsed_request = Request::parse(&request)?;
-
-                let response = create_response(parsed_request);
-                stream.write(response.format().as_bytes()).unwrap();
+            Ok(stream) => {
+                std::thread::spawn(move || handle_connection(stream));
             }
             Err(e) => {
                 bail!("Unable to connect: {}", e);
