@@ -2,10 +2,13 @@
 use anyhow::{bail, Result};
 use std::io::{Read, Write};
 use std::net::TcpListener;
+use std::{env, fs};
+use utils::tracing_setup;
 
 use tracing::info;
 
 mod http;
+mod utils;
 use http::{Request, Response};
 
 // To try this locally on macOS:
@@ -18,14 +21,29 @@ const OK: &str = "200 OK";
 const NOT_FOUND: &str = "404 NOT FOUND";
 const TEXT_PLAIN: &str = "text/plain";
 
-fn create_response(request: Request) -> Response {
+fn router(request: Request, directory: &str) -> Response {
     match request.path.as_str() {
         path if path.starts_with("/echo/") => {
             let random_string = &path[6..];
             Response::new(OK, TEXT_PLAIN, random_string.to_string())
         }
-        path if path == "/" => Response::new(OK, TEXT_PLAIN, "".to_string()),
-        path if path == "/user-agent" => Response::new(OK, TEXT_PLAIN, request.user_agent),
+        path if path.starts_with("/files/") => {
+            let filename = &path[7..];
+            let filepath = format!("{}/{}", directory, filename);
+            match fs::read_to_string(&filepath) {
+                Ok(contents) => Response::new(OK, "application/octet-stream", contents),
+                Err(_) => Response::new(NOT_FOUND, TEXT_PLAIN, "".to_string()),
+            }
+        }
+        path if path == "/" || path == "/user-agent" => {
+            let content =
+                if path == "/" {
+                    "".to_string()
+                } else {
+                    request.user_agent.clone()
+                };
+            Response::new(OK, TEXT_PLAIN, content)
+        }
         _ => Response::new(NOT_FOUND, TEXT_PLAIN, "".to_string()),
     }
 }
@@ -38,11 +56,11 @@ fn parse_stream(stream: &mut std::net::TcpStream) -> Result<String> {
     Ok(request)
 }
 
-fn handle_connection(mut stream: std::net::TcpStream) {
+fn handle_connection(mut stream: std::net::TcpStream, directory: String) {
     let request = parse_stream(&mut stream).unwrap();
     match Request::parse(&request) {
         Ok(parsed_request) => {
-            let response = create_response(parsed_request);
+            let response = router(parsed_request, &directory);
             stream.write(response.format().as_bytes()).unwrap();
         }
         Err(e) => {
@@ -52,23 +70,21 @@ fn handle_connection(mut stream: std::net::TcpStream) {
     }
 }
 
-fn tracing_setup() -> Result<(), anyhow::Error> {
-    let tracer = tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::INFO)
-        .finish();
-    tracing::subscriber::set_global_default(tracer)?;
-    Ok(())
-}
-
 fn main() -> Result<()> {
     tracing_setup()?;
 
     let listener = TcpListener::bind("127.0.0.1:4221")?;
 
+    let args: Vec<String> = env::args().collect();
+    let directory = args
+        .get(1)
+        .ok_or(anyhow::anyhow!("Directory not provided"))?;
+
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                std::thread::spawn(move || handle_connection(stream));
+                let directory = directory.clone();
+                std::thread::spawn(move || handle_connection(stream, directory));
             }
             Err(e) => {
                 bail!("Unable to connect: {}", e);
