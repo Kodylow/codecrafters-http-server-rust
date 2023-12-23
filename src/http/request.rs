@@ -18,17 +18,11 @@ pub struct StartLine {
 impl Request {
     pub fn parse(request: &str) -> Result<Request> {
         let mut lines = request.lines();
-
-        let headers_end_index = lines.position(|line| line.is_empty()).unwrap_or(0);
-
         let start_line =
             Self::parse_start_line(lines.next().ok_or_else(|| anyhow!("Request is empty"))?)?;
         let host = Self::parse_header(&mut lines, "Host:").unwrap_or_default();
         let user_agent = Self::parse_header(&mut lines, "User-Agent:").unwrap_or_default();
-        let body: String = lines
-            .skip(headers_end_index + 1)
-            .collect::<Vec<&str>>()
-            .join("\n");
+        let body = lines.collect::<Vec<&str>>().join("\n");
 
         Ok(Request {
             method: start_line.method,
