@@ -14,8 +14,6 @@ use http::{Request, Response};
 // (-v gives more verbose output,
 // -z just scan for listening daemons, without sending any data to them.)
 
-const RESPONSE_404: &str = "HTTP/1.1 404 NOT FOUND\r\n\r\n";
-
 fn main() -> Result<()> {
     tracing_setup()?;
 
