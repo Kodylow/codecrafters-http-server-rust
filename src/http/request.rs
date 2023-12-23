@@ -6,6 +6,7 @@ pub struct Request {
     pub version: String,
     pub host: String,
     pub user_agent: String,
+    pub body: String,
 }
 
 pub struct StartLine {
@@ -22,6 +23,7 @@ impl Request {
             Self::parse_start_line(lines.next().ok_or_else(|| anyhow!("Request is empty"))?)?;
         let host = Self::parse_header(&mut lines, "Host:").unwrap_or_default();
         let user_agent = Self::parse_header(&mut lines, "User-Agent:").unwrap_or_default();
+        let body = lines.collect::<Vec<&str>>().join("\n");
 
         Ok(Request {
             method: start_line.method,
@@ -29,6 +31,7 @@ impl Request {
             version: start_line.version,
             host,
             user_agent,
+            body,
         })
     }
 
