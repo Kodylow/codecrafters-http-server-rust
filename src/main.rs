@@ -31,6 +31,7 @@ fn router(request: Request, directory: &str) -> Response {
         path if path.starts_with("/files/") => {
             let filename = &path[7..];
             let filepath = format!("{}/{}", directory, filename);
+            info!("filepath: {}", filepath);
             match fs::read_to_string(&filepath) {
                 Ok(contents) => Response::new(OK, OCTET_STREAM, contents),
                 Err(_) => Response::new(NOT_FOUND, TEXT_PLAIN, "".to_string()),
