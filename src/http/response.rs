@@ -1,5 +1,3 @@
-use super::Request;
-
 pub struct Response {
     status_code: &'static str,
     content_type: &'static str,
