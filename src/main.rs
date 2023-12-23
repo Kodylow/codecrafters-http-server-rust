@@ -78,7 +78,8 @@ fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
     let directory = args
         .get(1)
-        .ok_or(anyhow::anyhow!("Directory not provided"))?;
+        .cloned()
+        .unwrap_or_else(|| String::from("default_directory"));
 
     for stream in listener.incoming() {
         match stream {
