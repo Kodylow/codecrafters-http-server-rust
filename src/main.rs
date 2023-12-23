@@ -5,8 +5,8 @@ use std::net::TcpListener;
 
 use tracing::info;
 
-mod http_request;
-use http_request::HttpRequest;
+mod http;
+use http::{Request, Response};
 
 // To try this locally on macOS:
 // run ./your_server.sh in one terminal session
@@ -14,7 +14,6 @@ use http_request::HttpRequest;
 // (-v gives more verbose output,
 // -z just scan for listening daemons, without sending any data to them.)
 
-const RESPONSE_200: &str = "HTTP/1.1 200 OK\r\n\r\n";
 const RESPONSE_404: &str = "HTTP/1.1 404 NOT FOUND\r\n\r\n";
 
 fn main() -> Result<()> {
@@ -27,14 +26,16 @@ fn main() -> Result<()> {
             Ok(mut stream) => {
                 let request = parse_stream(&mut stream)?;
 
-                let parsed_request = HttpRequest::parse(&request)?;
+                let parsed_request = Request::parse(&request)?;
 
                 let response = match parsed_request.path.as_str() {
-                    "/" => RESPONSE_200,
-                    _ => RESPONSE_404,
+                    path if path.starts_with("/echo/") => {
+                        let random_string = &path[6..];
+                        Response::new("200 OK", "text/plain", random_string.to_string())
+                    }
+                    _ => Response::new("404 NOT FOUND", "text/plain", "".to_string()),
                 };
-
-                stream.write(response.as_bytes()).unwrap();
+                stream.write(response.format().as_bytes()).unwrap();
             }
             Err(e) => {
                 bail!("Unable to connect: {}", e);
