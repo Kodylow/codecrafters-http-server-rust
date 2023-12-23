@@ -14,6 +14,10 @@ use http::{Request, Response};
 // (-v gives more verbose output,
 // -z just scan for listening daemons, without sending any data to them.)
 
+const OK: &str = "200 OK";
+const NOT_FOUND: &str = "404 NOT FOUND";
+const TEXT_PLAIN: &str = "text/plain";
+
 fn main() -> Result<()> {
     tracing_setup()?;
 
@@ -26,14 +30,7 @@ fn main() -> Result<()> {
 
                 let parsed_request = Request::parse(&request)?;
 
-                let response = match parsed_request.path.as_str() {
-                    path if path.starts_with("/echo/") => {
-                        let random_string = &path[6..];
-                        Response::new("200 OK", "text/plain", random_string.to_string())
-                    }
-                    path if path == "/" => Response::new("200 OK", "text/plain", "".to_string()),
-                    _ => Response::new("404 NOT FOUND", "text/plain", "".to_string()),
-                };
+                let response = create_response(parsed_request);
                 stream.write(response.format().as_bytes()).unwrap();
             }
             Err(e) => {
@@ -59,4 +56,16 @@ fn parse_stream(stream: &mut std::net::TcpStream) -> Result<String> {
     let request = String::from_utf8(buffer.to_vec())?;
     info!("request stream: {}", request);
     Ok(request)
+}
+
+fn create_response(request: Request) -> Response {
+    match request.path.as_str() {
+        path if path.starts_with("/echo/") => {
+            let random_string = &path[6..];
+            Response::new(OK, TEXT_PLAIN, random_string.to_string())
+        }
+        path if path == "/" => Response::new(OK, TEXT_PLAIN, "".to_string()),
+        path if path == "/user-agent" => Response::new(OK, TEXT_PLAIN, request.user_agent),
+        _ => Response::new(NOT_FOUND, TEXT_PLAIN, "".to_string()),
+    }
 }
